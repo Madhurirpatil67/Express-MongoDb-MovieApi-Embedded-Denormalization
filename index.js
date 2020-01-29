@@ -2,6 +2,7 @@ let express=require("express");
 let app=express();
 let mongoose=require("mongoose");
 let port=4600||process.env.PORT;
+let auth=require("./Authentication/Routes/auth");
 app.use(express.json());
 
 let user=require("./routes/user");
@@ -13,3 +14,4 @@ mongoose
 app.listen(port,()=>console.log(`connected to port`));
 
 app.use("/api",user);
+app.use("/api",auth);

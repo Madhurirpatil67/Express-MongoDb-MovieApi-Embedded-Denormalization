@@ -1,17 +1,17 @@
 let express=require("express");
 let router=express.Router();
-let joi=require("@hapi/joi");
 let user=require("../dbModel/user");
+let bcrypt=require("bcrypt");
 
 //fetch
 router.get("/fetchUser",async(req,res)=>{
-   let data=await user.find();
+   let data=await user.userModel.find();
    res.send({d:data});
 });
 
 //fetch by id
 router.get("/fetchUser/:id",async(req,res)=>{
-   let data=await user.findById(req.params.id);
+   let data=await user.userModel.findById(req.params.id);
    if(!data){return res.status(404).send({message:"Invalid User Id"})}
    res.send({d:data});
 });
@@ -19,29 +19,32 @@ router.get("/fetchUser/:id",async(req,res)=>{
 
 //create
 router.post("/createUser",async(req,res)=>{
-  let user=await user.findOne({"UserLogin.EmailId":req.body.UserLogin.EmailId});
-  if(user){res.status(403).send({message:"User Already Exist..."})}
-  let {error}=validationError(req.body);
+  let email=await user.userModel.findOne({"UserLogin.EmailId":req.body.UserLogin.EmailId});
+  if(email){res.status(403).send({message:"User Already Exist..."})}
+
+  let {error}=user.validationError(req.body);
   if(error){
      return res.send(error.details[0].message);
   }
-  let newUser=new user({
+  let newUser=new user.userModel({
       FirstName:req.body.FirstName,
       LastName:req.body.LastName,
-      MobileNO:req.body.MobileNo,
+      MobileNO:req.body.MobileNO,
       UserLogin:req.body.UserLogin
    })    
+   let salt=await bcrypt.genSalt(10);
+   newUser.UserLogin.password=await bcrypt.hash(newUser.UserLogin.password,salt)
    let data=await newUser.save();
    res.send({message:"Thank You,Data Inserted Successfully",d:data});
 });
 
 //update
 router.put("/updateUser/:id",async(req,res)=>{
-   let user=await user.findById(req.params.id);
+   let user=await user.userModel.findById(req.params.id);
    if(!user){
       return res.status(404).send({message:"Invalid User Id"});
    }
-   let {error}=validationError(req.body);
+   let {error}=user.validationError(req.body);
    if(error){
       return res.send(error.details[0].message);
    }
@@ -56,24 +59,13 @@ router.put("/updateUser/:id",async(req,res)=>{
 
 //remove
 router.delete("/removeUser/:id",async(req,res)=>{
-    let data=await user.findByIdAndRemove(req.params.id);
+    let data=await user.userModel.findByIdAndRemove(req.params.id);
     if(!data){
        res.status(404).send({message:"Invalid User Id"});
     }
     res.send({message:"Thank You! Come Back Again:)"});
 })
 
-function validationError(error){
-   let schema=joi.object({
-      FirstName:joi.string().required().min(3).max(200),
-      LastName:joi.string().required().min(3).max(200),
-      MobileNO:joi.string().required(),
-      UserLogin:{
-                  EmailId:joi.string().required().email(),
-                  password:joi.string().required()
-                }
-   })
-   return schema.validate(error);
-};
-module.exports(router);
+
+module.exports=router;
 

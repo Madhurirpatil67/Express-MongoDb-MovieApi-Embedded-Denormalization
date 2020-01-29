@@ -1,4 +1,5 @@
 let mongoose=require("mongoose");
+let joi=require("@hapi/joi");
 
 let userSchema=mongoose.Schema({
   FirstName:{type:String,required:true,min:3,max:200,alphanum:true,trim:true},
@@ -11,4 +12,18 @@ let userSchema=mongoose.Schema({
 });
 
 let userModel=mongoose.model("users",userSchema);
-module.exports=userModel;
+
+function validationError(error){
+  let schema=joi.object({
+     FirstName:joi.string().required().min(3).max(200),
+     LastName:joi.string().required().min(3).max(200),
+     MobileNO:joi.string().required(),
+     UserLogin:{
+                 EmailId:joi.string().required().email(),
+                 password:joi.string().required()
+               }
+  })
+  return schema.validate(error);
+};
+
+module.exports={userModel,validationError};
